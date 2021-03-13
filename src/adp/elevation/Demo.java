@@ -48,7 +48,7 @@ public class Demo implements SearchListener {
 	 */
 	public static void main(final String[] args) throws IOException {
 		final File file = new File("rgbelevation/smallelevation.png");
-		//final File file = new File( "rgbelevation/bigelevation.png");
+		// final File file = new File( "rgbelevation/bigelevation.png");
 		new Demo(file);
 	}
 
