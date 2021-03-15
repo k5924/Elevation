@@ -7,8 +7,6 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -21,10 +19,10 @@ import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
 import javax.swing.SwingUtilities;
 
 import adp.elevation.Configuration;
-import adp.elevation.jar.BasicSearcher;
 import adp.elevation.jar.Searcher;
 import adp.elevation.jar.Searcher.SearchListener;
 
@@ -40,6 +38,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private final JLabel outputLabel = new JLabel("information");
 	private final JButton startButton = new JButton("Start");
+	private final JButton cancelButton = new JButton("Cancel");
+
+	private JProgressBar progress = new JProgressBar();
 
 	private Searcher searcher;
 
@@ -61,9 +62,14 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		final JPanel imagePanel = new JPanel(new BorderLayout());
 		imagePanel.add(this.mainImagePanel, BorderLayout.CENTER);
 
+		final JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
+		buttonPanel.add(this.startButton);
+		buttonPanel.add(this.cancelButton);
+
 		final JPanel bottomPanel = new JPanel(new BorderLayout());
+		bottomPanel.add(this.progress, BorderLayout.NORTH);
 		bottomPanel.add(this.outputLabel, BorderLayout.CENTER);
-		bottomPanel.add(this.startButton, BorderLayout.SOUTH);
+		bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
 
 		final JPanel mainPanel = new JPanel(new BorderLayout());
 
@@ -91,7 +97,15 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
+			this.progress.setValue(0);
+			this.progress.setStringPainted(true);
 			new Thread(() -> runSearch()).start();
+		});
+
+		this.cancelButton.addActionListener(ev -> {
+			if (this.searcher != null) {
+				this.searcher.cancel();
+			}
 		});
 
 		this.chooser.setMultiSelectionEnabled(false);
@@ -108,10 +122,29 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * {@link Searcher#runSearch(SearchListener)}.
 	 */
 	private void runSearch() {
-		this.searcher = new BasicSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
-		this.outputLabel.setText("information");
-		this.searcher.runSearch(this);
+		if (this.raster != null) {
+			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
+			this.outputLabel.setText("information");
+			new Thread(() -> updateProgress()).start();
+			this.searcher.runSearch(this);
+		}
+	}
 
+	public void updateProgress() {
+		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
+		float total = this.searcher.numberOfPositionsToTry();
+		while (currentProgress < total) {
+
+			try {
+				Thread.sleep(1000);
+			} catch (InterruptedException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			currentProgress = this.searcher.numberOfPositionsTriedSoFar();
+			float percent = (currentProgress / total) * 100;
+			this.progress.setValue(Math.round(percent));
+		}
 	}
 
 	/**
