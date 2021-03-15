@@ -91,11 +91,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			new Thread(new Runnable() {
-				public void run() {
-					runSearch();
-				}
-			}).start();
+			new Thread(() -> runSearch()).start();
 		});
 
 		this.chooser.setMultiSelectionEnabled(false);
@@ -221,11 +217,6 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	}
 
 	public static void main(final String[] args) {
-		SwingUtilities.invokeLater(new Runnable() {
-			@Override
-			public void run() {
-				launch();
-			}
-		});
+		SwingUtilities.invokeLater(() -> launch());
 	}
 }
