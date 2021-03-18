@@ -97,9 +97,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			this.progress.setValue(0);
-			this.progress.setStringPainted(true);
+			// for normal searcher
 			new Thread(() -> runSearch()).start();
+			
+			// for parallelised searcher
+			//new Thread(() -> runParallelSearch()).start();
 		});
 
 		this.cancelButton.addActionListener(ev -> {
@@ -125,12 +127,21 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		if (this.raster != null) {
 			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
 			this.outputLabel.setText("information");
+			this.progress.setValue(0);
+			this.progress.setStringPainted(true);
 			new Thread(() -> updateProgress()).start();
 			this.searcher.runSearch(this);
 		}
 	}
+	
+	private void runParallelSearch() {
+		// TODO Auto-generated method stub
+		int end = (this.raster.getHeight() * this.raster.getWidth()) - 1;
+		
+		RASearcher parallelSearcher = new RASearcher(this.raster, 0, end, end);
+	}
 
-	public void updateProgress() {
+	private void updateProgress() {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
 		while (currentProgress < total) {
