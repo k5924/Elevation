@@ -12,6 +12,8 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ForkJoinPool;
+import java.util.concurrent.ForkJoinTask;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
@@ -98,10 +100,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		this.startButton.addActionListener(ev -> {
 			// for normal searcher
-			new Thread(() -> runSearch()).start();
+			//new Thread(() -> runSearch()).start();
 			
 			// for parallelised searcher
-			//new Thread(() -> runParallelSearch()).start();
+			new Thread(() -> runParallelSearch()).start();
 		});
 
 		this.cancelButton.addActionListener(ev -> {
@@ -134,11 +136,16 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		}
 	}
 	
-	private void runParallelSearch() {
+	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		int end = (this.raster.getHeight() * this.raster.getWidth()) - 1;
-		
-		RASearcher parallelSearcher = new RASearcher(this.raster, 0, end, end);
+		this.searcher = new RASearcher(this.raster, 0, end, end, this);
+		this.outputLabel.setText("information");
+		this.progress.setValue(0);
+		this.progress.setStringPainted(true);
+		new Thread(() -> updateProgress()).start();
+		ForkJoinPool pool = new ForkJoinPool();
+		pool.invoke((ForkJoinTask<T>) this.searcher);
 	}
 
 	private void updateProgress() {
