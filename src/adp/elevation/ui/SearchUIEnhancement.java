@@ -100,10 +100,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		this.startButton.addActionListener(ev -> {
 			// for normal searcher
-			//new Thread(() -> runSearch()).start();
-			
+				new Thread(() -> runSearch()).start();
+
 			// for parallelised searcher
-			new Thread(() -> runParallelSearch()).start();
+//			new Thread(() -> runParallelSearch()).start();
 		});
 
 		this.cancelButton.addActionListener(ev -> {
@@ -125,7 +125,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * Clears output label and runs the search by calling
 	 * {@link Searcher#runSearch(SearchListener)}.
 	 */
-	private void runSearch() {
+	private synchronized void runSearch() {
 		if (this.raster != null) {
 			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
 			this.outputLabel.setText("information");
@@ -170,7 +170,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * information in the UI output label.
 	 */
 	@Override
-	public void information(final String message) {
+	public synchronized void information(final String message) {
 		this.outputLabel.setText(message + "\n");
 	}
 
@@ -179,7 +179,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * displaying the information in the UI output label.
 	 */
 	@Override
-	public void possibleMatch(final int position, final long elapsedTime, final long positionsTriedSoFar) {
+	public synchronized void possibleMatch(final int position, final long elapsedTime, final long positionsTriedSoFar) {
 		final int x = position % this.raster.getWidth();
 		final int y = position / this.raster.getWidth();
 		this.outputLabel.setText("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
@@ -190,14 +190,14 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	}
 
 	@Override
-	public void update(final int position, final long elapsedTime, final long positionsTriedSoFar) {
+	public synchronized void update(final int position, final long elapsedTime, final long positionsTriedSoFar) {
 		final int x = position % this.raster.getWidth();
 		final int y = position / this.raster.getWidth();
 		this.outputLabel.setText("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
 				+ positionsTriedSoFar + " positions attempted)\n");
 	}
 
-	private static void launch() {
+	private synchronized static void launch() {
 		new SearchUIEnhancement();
 	}
 
