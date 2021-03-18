@@ -30,10 +30,6 @@ public class RASearcher extends RecursiveAction implements Searcher{
 	@Override
 	protected void compute() {
 		// TODO Auto-generated method stub
-//		if (this.length < this.threshold) {
-//			//doCalculateFibs(input, start, output, length);
-//			return;
-//		}
 		if (this.length < this.Threshold) {
 			runSearch(new SearchListener() {
 				
