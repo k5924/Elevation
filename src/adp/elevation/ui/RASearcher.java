@@ -6,8 +6,8 @@ import java.util.concurrent.RecursiveAction;
 import adp.elevation.Configuration;
 import adp.elevation.jar.Searcher;
 
-public class RASearcher extends RecursiveAction implements Searcher{
-	
+public class RASearcher extends RecursiveAction implements Searcher {
+
 	private final BufferedImage raster;
 	private final int startPos;
 	private final int endPos;
@@ -17,7 +17,7 @@ public class RASearcher extends RecursiveAction implements Searcher{
 	private final double Threshold = Configuration.deviationThreshold;
 	private volatile int currentPos = 0;
 	private volatile int counter = 0;
-	
+
 	public RASearcher(BufferedImage raster, int startPos, int endPos, int length, SearchUIEnhancement masterListener) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
@@ -32,19 +32,19 @@ public class RASearcher extends RecursiveAction implements Searcher{
 		// TODO Auto-generated method stub
 		if (this.length < this.Threshold) {
 			runSearch(new SearchListener() {
-				
+
 				@Override
 				public void update(int position, long elapsedTime, long positionsTriedSoFar) {
 					// TODO Auto-generated method stub
 					return;
 				}
-				
+
 				@Override
 				public void possibleMatch(int position, long elapsedTime, long positionsTriedSoFar) {
 					// TODO Auto-generated method stub
 					masterListener.possibleMatch(position, elapsedTime, positionsTriedSoFar);
 				}
-				
+
 				@Override
 				public void information(String message) {
 					// TODO Auto-generated method stub
@@ -53,11 +53,12 @@ public class RASearcher extends RecursiveAction implements Searcher{
 			});
 			return;
 		}
-		
+
 		int split = this.length / 2;
-		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos, split, this.masterListener), new RASearcher(this.raster, this.startPos+split, this.endPos, split, this.masterListener));
+		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos, split, this.masterListener),
+				new RASearcher(this.raster, this.startPos + split, this.endPos, this.length - split, this.masterListener));
 	}
-	
+
 	// code below here is from Mikes AsbtractSearcher
 
 	@Override
@@ -77,6 +78,7 @@ public class RASearcher extends RecursiveAction implements Searcher{
 		// TODO Auto-generated method stub
 		this.reset();
 		listener.information("SEARCHING...");
+
 		final long startTime = System.currentTimeMillis();
 		while (true) {
 			final int foundMatch = this.findMatch(listener, startTime);
@@ -89,7 +91,6 @@ public class RASearcher extends RecursiveAction implements Searcher{
 		}
 		listener.information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s\n");
 		// listener.information(this.counter + " positions attempted.");
-		
 	}
 
 	@Override
@@ -102,9 +103,9 @@ public class RASearcher extends RecursiveAction implements Searcher{
 	@Override
 	public void cancel() {
 		// TODO Auto-generated method stub
-		
+
 	}
-	
+
 	private int findMatch(final SearchListener listener, final long startTime) {
 		while (this.counter < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
@@ -180,5 +181,5 @@ public class RASearcher extends RecursiveAction implements Searcher{
 		variance /= size;
 		return Math.sqrt(variance);
 	}
-	
+
 }
