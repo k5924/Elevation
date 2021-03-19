@@ -42,7 +42,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JButton startButton = new JButton("Start");
 	private final JButton cancelButton = new JButton("Cancel");
 
-	private JProgressBar progress = new JProgressBar();
+	private final JProgressBar progress = new JProgressBar();
+	
+	private volatile boolean cancelled = false;
+	private volatile Thread killThread;
 
 	private Searcher searcher;
 
@@ -81,20 +84,20 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		// w6 tutorial
 		this.openBigButton.addActionListener(ev -> {
-			if (SearchUIEnhancement.this.chooser
-					.showOpenDialog(SearchUIEnhancement.this) == JFileChooser.APPROVE_OPTION) {
-				final File file = SearchUIEnhancement.this.chooser.getSelectedFile();
-				SearchUIEnhancement.this.mainFilenameLabel.setText(file.getName());
+			if (this.chooser
+					.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+				final File file = this.chooser.getSelectedFile();
+				this.mainFilenameLabel.setText(file.getName());
 				try {
-					SearchUIEnhancement.this.raster = ImageIO.read(file);
+					this.raster = ImageIO.read(file);
 				} catch (final IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				SearchUIEnhancement.this.mainImagePanel.resetHighlights();
-				SearchUIEnhancement.this.mainImagePanel.setImage(SearchUIEnhancement.this.raster);
+				this.mainImagePanel.resetHighlights();
+				this.mainImagePanel.setImage(this.raster);
 				pack();
-				SearchUIEnhancement.this.mainImagePanel.repaint();
+				this.mainImagePanel.repaint();
 			}
 		});
 
@@ -127,8 +130,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	private synchronized void runSearch() {
 		if (this.raster != null) {
-			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
-			this.outputLabel.setText("information");
+			this.killThread = Thread.currentThread();
+			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold, this);
+			information("information");
 			this.progress.setValue(0);
 			this.progress.setStringPainted(true);
 			new Thread(() -> updateProgress()).start();
@@ -136,11 +140,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		}
 	}
 	
-	private <T> void runParallelSearch() {
+	private synchronized <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		int end = (this.raster.getHeight() * this.raster.getWidth()) - 1;
 		this.searcher = new RASearcher(this.raster, 0, end, end, this);
-		this.outputLabel.setText("information");
+		information("information");
 		this.progress.setValue(0);
 		this.progress.setStringPainted(true);
 		new Thread(() -> updateProgress()).start();
@@ -165,6 +169,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		}
 	}
 
+	public void cancel() {
+		this.cancelled = true;
+		this.killThread.interrupt();
+	}
+	
 	/**
 	 * Implements {@link SearchListener#information(String)} by displaying the
 	 * information in the UI output label.
@@ -182,7 +191,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	public synchronized void possibleMatch(final int position, final long elapsedTime, final long positionsTriedSoFar) {
 		final int x = position % this.raster.getWidth();
 		final int y = position / this.raster.getWidth();
-		this.outputLabel.setText("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
+		information("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
 				+ positionsTriedSoFar + " positions attempted)\n");
 
 		final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
@@ -193,7 +202,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	public synchronized void update(final int position, final long elapsedTime, final long positionsTriedSoFar) {
 		final int x = position % this.raster.getWidth();
 		final int y = position / this.raster.getWidth();
-		this.outputLabel.setText("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
+		information("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
 				+ positionsTriedSoFar + " positions attempted)\n");
 	}
 
