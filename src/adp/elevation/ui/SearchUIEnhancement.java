@@ -17,6 +17,7 @@ import java.util.concurrent.ForkJoinTask;
 
 import javax.imageio.ImageIO;
 import javax.swing.JButton;
+import javax.swing.JCheckBox;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -43,6 +44,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JButton cancelButton = new JButton("Cancel");
 
 	private final JProgressBar progress = new JProgressBar();
+	private final JCheckBox isParallel = new JCheckBox("Run in parallel");
 	
 	private volatile boolean cancelled = false;
 	private volatile Thread killThread;
@@ -60,7 +62,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		final JPanel mainFilePanel = new JPanel(new BorderLayout());
 		mainFilePanel.add(this.openBigButton, BorderLayout.WEST);
 		mainFilePanel.add(this.mainFilenameLabel, BorderLayout.CENTER);
-
+		mainFilePanel.add(this.isParallel, BorderLayout.EAST);
 		final JPanel topPanel = new JPanel(new GridLayout(0, 1));
 		topPanel.add(mainFilePanel);
 
@@ -102,11 +104,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			// for normal searcher
-//				new Thread(() -> runSearch()).start();
-
-			// for parallelised searcher
-			new Thread(() -> runParallelSearch()).start();
+			if (this.isParallel.isSelected()){
+				new Thread(() -> runParallelSearch()).start();
+			} else {
+				new Thread(() -> runSearch()).start();
+			}
 		});
 
 		this.cancelButton.addActionListener(ev -> {
