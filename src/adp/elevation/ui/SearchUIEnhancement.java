@@ -103,10 +103,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		this.startButton.addActionListener(ev -> {
 			// for normal searcher
-				new Thread(() -> runSearch()).start();
+//				new Thread(() -> runSearch()).start();
 
 			// for parallelised searcher
-//			new Thread(() -> runParallelSearch()).start();
+			new Thread(() -> runParallelSearch()).start();
 		});
 
 		this.cancelButton.addActionListener(ev -> {
@@ -140,7 +140,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		}
 	}
 	
-	private synchronized <T> void runParallelSearch() {
+	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		int end = (this.raster.getHeight() * this.raster.getWidth()) - 1;
 		this.searcher = new RASearcher(this.raster, 0, end, end, this);
