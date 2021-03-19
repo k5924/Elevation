@@ -45,11 +45,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private final JProgressBar progress = new JProgressBar();
 	private final JCheckBox isParallel = new JCheckBox("Run in parallel");
-	
-	private volatile boolean cancelled = false;
-	private volatile Thread killThread;
 
-	private Searcher searcher;
+	private volatile Searcher searcher;
 
 	private BufferedImage raster;
 
@@ -132,8 +129,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	private synchronized void runSearch() {
 		if (this.raster != null) {
-			this.killThread = Thread.currentThread();
-			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold, this);
+			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold, Thread.currentThread());
 			information("information");
 			this.progress.setValue(0);
 			this.progress.setStringPainted(true);
@@ -144,8 +140,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
-		int end = (this.raster.getHeight() * this.raster.getWidth()) - 1;
-		this.searcher = new RASearcher(this.raster, 0, end, end, this);
+		this.searcher = new RASearcher(this.raster, 0, (this.raster.getHeight() * this.raster.getWidth()) - 1, this);
 		information("information");
 		this.progress.setValue(0);
 		this.progress.setStringPainted(true);
@@ -170,11 +165,6 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 			this.progress.setValue(Math.round(percent));
 		}
 	}
-
-	public void cancel() {
-		this.cancelled = true;
-		this.killThread.interrupt();
-	}
 	
 	/**
 	 * Implements {@link SearchListener#information(String)} by displaying the
@@ -182,7 +172,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	@Override
 	public synchronized void information(final String message) {
-		this.outputLabel.setText(message + "\n");
+		SwingUtilities.invokeLater(() -> this.outputLabel.setText(message + "\n"));
+		//this.outputLabel.setText(message + "\n");
 	}
 
 	/**

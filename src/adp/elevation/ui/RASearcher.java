@@ -11,28 +11,26 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	private final BufferedImage raster;
 	private final int startPos;
 	private final int endPos;
-	private final int length;
 	private final SearchUIEnhancement masterListener;
 	private final int side = Configuration.side;
 	private final double Threshold = Configuration.deviationThreshold;
-	private volatile int currentPos = 0;
+	private volatile int currentPos;
 	private volatile int counter = 0;
 
-	public RASearcher(BufferedImage raster, int startPos, int endPos, int length, SearchUIEnhancement masterListener) {
+	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
 		this.startPos = startPos;
+		this.currentPos = 0;
 		this.endPos = endPos;
-		this.length = length;
 		this.masterListener = masterListener;
 	}
 
 	@Override
 	protected void compute() {
 		// TODO Auto-generated method stub
-		if (this.length < this.Threshold) {
+		if (this.numberOfPositionsToTry() < this.Threshold) {
 			runSearch(new SearchListener() {
-
 				@Override
 				public void update(int position, long elapsedTime, long positionsTriedSoFar) {
 					// TODO Auto-generated method stub
@@ -54,9 +52,9 @@ public class RASearcher extends RecursiveAction implements Searcher {
 			return;
 		}
 
-		int split = this.length / 2;
-		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos, split, this.masterListener),
-				new RASearcher(this.raster, this.startPos + split, this.endPos, this.length - split, this.masterListener));
+		int split = this.numberOfPositionsToTry() / 2;
+		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener),
+				new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener));
 	}
 
 	// code below here is from Mikes AsbtractSearcher
@@ -68,7 +66,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	}
 
 	@Override
-	public int numberOfPositionsTriedSoFar() {
+	public synchronized final int numberOfPositionsTriedSoFar() {
 		// TODO Auto-generated method stub
 		return this.counter;
 	}
@@ -76,21 +74,22 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	@Override
 	public void runSearch(SearchListener listener) throws SearchCancelledException {
 		// TODO Auto-generated method stub
-		this.reset();
-		listener.information("SEARCHING...");
+		synchronized(this) {
+			this.reset();
+			listener.information("SEARCHING...");
 
-		final long startTime = System.currentTimeMillis();
-		while (true) {
-			final int foundMatch = this.findMatch(listener, startTime);
-			if (foundMatch >= 0) {
-				listener.possibleMatch(foundMatch, System.currentTimeMillis() - startTime,
-						numberOfPositionsTriedSoFar());
-			} else {
-				break;
+			final long startTime = System.currentTimeMillis();
+			while (true) {
+				final int foundMatch = this.findMatch(listener, startTime);
+				if (foundMatch >= 0) {
+					listener.possibleMatch(foundMatch, System.currentTimeMillis() - startTime,
+							numberOfPositionsTriedSoFar());
+				} else {
+					break;
+				}
 			}
+			listener.information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s\n");
 		}
-		listener.information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s\n");
-		// listener.information(this.counter + " positions attempted.");
 	}
 
 	@Override
@@ -106,7 +105,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 
 	}
 
-	private int findMatch(final SearchListener listener, final long startTime) {
+	private synchronized int findMatch(final SearchListener listener, final long startTime) {
 		while (this.counter < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
 			this.currentPos++;
@@ -121,7 +120,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		return -1;
 	}
 	
-	protected boolean tryPosition() {
+	protected synchronized boolean tryPosition() {
 
 		final int x1 = this.currentPos % this.raster.getWidth();
 		final int y1 = this.currentPos / this.raster.getWidth();
@@ -167,7 +166,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		return stdev < this.Threshold;
 	}
 
-	private double standardDevPop(final double[] array, final int size) {
+	private synchronized double standardDevPop(final double[] array, final int size) {
 		double sum = 0;
 		for (int i = 0; i < size; i++) {
 			sum += array[i];
