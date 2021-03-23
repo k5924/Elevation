@@ -27,6 +27,7 @@ import javax.swing.SwingUtilities;
 
 import adp.elevation.Configuration;
 import adp.elevation.jar.Searcher;
+import adp.elevation.jar.Searcher.SearchCancelledException;
 import adp.elevation.jar.Searcher.SearchListener;
 
 public class SearchUIEnhancement extends JFrame implements SearchListener {
@@ -49,6 +50,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private volatile Searcher searcher;
 
 	private BufferedImage raster;
+	private Thread running;
 
 	/**
 	 * Construct an SearchUIEnhancement and set it visible.
@@ -83,8 +85,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		// w6 tutorial
 		this.openBigButton.addActionListener(ev -> {
-			if (this.chooser
-					.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
+			if (this.chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
 				final File file = this.chooser.getSelectedFile();
 				this.mainFilenameLabel.setText(file.getName());
 				try {
@@ -101,7 +102,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			if (this.isParallel.isSelected()){
+			if (this.isParallel.isSelected()) {
 				new Thread(() -> runParallelSearch()).start();
 			} else {
 				new Thread(() -> runSearch()).start();
@@ -110,7 +111,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		this.cancelButton.addActionListener(ev -> {
 			if (this.searcher != null) {
-				this.searcher.cancel();
+				try {
+					this.searcher.cancel();
+				} catch (SearchCancelledException SCE) {
+					running.interrupt();
+				}
 			}
 		});
 
@@ -129,22 +134,23 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	private synchronized void runSearch() {
 		if (this.raster != null) {
-			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold, Thread.currentThread());
+			running = Thread.currentThread();
+			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
+			new Thread(() -> updateProgress()).start();
 			information("information");
 			this.progress.setValue(0);
 			this.progress.setStringPainted(true);
-			new Thread(() -> updateProgress()).start();
 			this.searcher.runSearch(this);
 		}
 	}
-	
+
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		this.searcher = new RASearcher(this.raster, 0, (this.raster.getHeight() * this.raster.getWidth()) - 1, this);
+		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
 		this.progress.setStringPainted(true);
-		new Thread(() -> updateProgress()).start();
 		ForkJoinPool pool = new ForkJoinPool();
 		pool.invoke((ForkJoinTask<T>) this.searcher);
 	}
@@ -153,19 +159,18 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
 		while (currentProgress < total) {
-
 			try {
+				currentProgress = this.searcher.numberOfPositionsTriedSoFar();
+				float percent = (currentProgress / total) * 100;
+				this.progress.setValue(Math.round(percent));
 				Thread.sleep(1000);
 			} catch (InterruptedException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
-			currentProgress = this.searcher.numberOfPositionsTriedSoFar();
-			float percent = (currentProgress / total) * 100;
-			this.progress.setValue(Math.round(percent));
 		}
 	}
-	
+
 	/**
 	 * Implements {@link SearchListener#information(String)} by displaying the
 	 * information in the UI output label.
@@ -173,7 +178,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	@Override
 	public synchronized void information(final String message) {
 		SwingUtilities.invokeLater(() -> this.outputLabel.setText(message + "\n"));
-		//this.outputLabel.setText(message + "\n");
+		// this.outputLabel.setText(message + "\n");
 	}
 
 	/**
@@ -195,8 +200,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	public synchronized void update(final int position, final long elapsedTime, final long positionsTriedSoFar) {
 		final int x = position % this.raster.getWidth();
 		final int y = position / this.raster.getWidth();
-		information("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
-				+ positionsTriedSoFar + " positions attempted)\n");
+		information("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s (" + positionsTriedSoFar
+				+ " positions attempted)\n");
 	}
 
 	private synchronized static void launch() {
