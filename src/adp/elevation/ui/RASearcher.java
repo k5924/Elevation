@@ -7,23 +7,29 @@ import adp.elevation.Configuration;
 import adp.elevation.jar.Searcher;
 
 public class RASearcher extends RecursiveAction implements Searcher {
-
+	private static final long serialVersionUID = 1L;
 	private final BufferedImage raster;
 	private final int startPos;
 	private final int endPos;
-	private final SearchUIEnhancement masterListener;
 	private final int side = Configuration.side;
 	private final double Threshold = Configuration.deviationThreshold;
 	private volatile int currentPos;
 	private volatile int counter = 0;
+	private volatile SearchListener listener;
 
-	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener) {
+	public RASearcher(BufferedImage raster, int startPos, int endPos) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
 		this.startPos = startPos;
 		this.currentPos = 0;
 		this.endPos = endPos;
-		this.masterListener = masterListener;
+	}
+
+	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchListener listener) {
+		// TODO Auto-generated constructor stub
+		this(raster, startPos, endPos);
+		this.listener = listener;
+
 	}
 
 	@Override
@@ -32,19 +38,19 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		if (this.numberOfPositionsToTry() < this.Threshold) {
 			runSearch(new SearchListener() {
 				@Override
-				public void update(int position, long elapsedTime, long positionsTriedSoFar) {
+				public synchronized void update(int position, long elapsedTime, long positionsTriedSoFar) {
 					// TODO Auto-generated method stub
 					return;
 				}
 
 				@Override
-				public void possibleMatch(int position, long elapsedTime, long positionsTriedSoFar) {
+				public synchronized void possibleMatch(int position, long elapsedTime, long positionsTriedSoFar) {
 					// TODO Auto-generated method stub
-					masterListener.possibleMatch(position, elapsedTime, positionsTriedSoFar);
+					SearchUIEnhancement.passMatch(position, elapsedTime, positionsTriedSoFar);
 				}
 
 				@Override
-				public void information(String message) {
+				public synchronized void information(String message) {
 					// TODO Auto-generated method stub
 					return;
 				}
@@ -53,14 +59,14 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		}
 
 		int split = this.numberOfPositionsToTry() / 2;
-		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener),
-				new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener));
+		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos - split, this.listener),
+				new RASearcher(this.raster, this.startPos + split, this.endPos, this.listener));
 	}
 
 	// code below here is from Mikes AsbtractSearcher
 
 	@Override
-	public int numberOfPositionsToTry() {
+	public final int numberOfPositionsToTry() {
 		// TODO Auto-generated method stub
 		return this.endPos - this.startPos;
 	}
@@ -74,46 +80,58 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	@Override
 	public void runSearch(SearchListener listener) throws SearchCancelledException {
 		// TODO Auto-generated method stub
-		synchronized(this) {
+		this.listener = listener;
+		synchronized(this.listener) {
 			this.reset();
-			listener.information("SEARCHING...");
-
+			this.listener.information("SEARCHING...");
 			final long startTime = System.currentTimeMillis();
+			
 			while (true) {
-				final int foundMatch = this.findMatch(listener, startTime);
+				final int foundMatch = this.findMatch(this.listener, startTime);
 				if (foundMatch >= 0) {
-					listener.possibleMatch(foundMatch, System.currentTimeMillis() - startTime,
+					this.listener.possibleMatch(foundMatch, System.currentTimeMillis() - startTime,
 							numberOfPositionsTriedSoFar());
 				} else {
 					break;
 				}
 			}
-			listener.information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s\n");
+			this.listener.information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s\n");
 		}
 	}
 
 	@Override
-	public void reset() {
+	public synchronized void reset() {
 		// TODO Auto-generated method stub
-		this.counter = 0;
 		this.currentPos = this.startPos;
 	}
 
 	@Override
 	public void cancel() {
 		// TODO Auto-generated method stub
-
+		throw new SearchCancelledException();
+	}
+	
+	private synchronized void incrementPos() {
+		this.currentPos++;
+	}
+	
+	private synchronized int decrementPos() {
+		return this.currentPos--;
+	}
+	
+	private synchronized void incrementCounter() {
+		this.counter++;
 	}
 
 	private synchronized int findMatch(final SearchListener listener, final long startTime) {
-		while (this.counter < numberOfPositionsToTry()) {
+		while (numberOfPositionsTriedSoFar() < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
-			this.currentPos++;
-			this.counter++;
+			incrementPos();
+			incrementCounter();
 			if (hit) {
-				return this.currentPos - 1;
-			} else if (this.counter % 1000 == 0) {
-				listener.update(this.currentPos - 1, System.currentTimeMillis() - startTime,
+				return decrementPos();
+			} else if (numberOfPositionsTriedSoFar() % 1000 == 0) {
+				listener.update(decrementPos(), System.currentTimeMillis() - startTime,
 						numberOfPositionsTriedSoFar());
 			}
 		}
