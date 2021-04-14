@@ -48,9 +48,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JCheckBox isParallel = new JCheckBox("Run in parallel");
 
 	private volatile Searcher searcher;
-
+	private volatile static Thread running;
 	private static BufferedImage raster;
-	private volatile Thread running = null;
 
 	/**
 	 * Construct an SearchUIEnhancement and set it visible.
@@ -102,7 +101,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			if (this.isParallel.isSelected() & !Thread.interrupted()) {
+			mainImagePanel.resetHighlights();
+			mainImagePanel.setImage(raster);
+			pack();
+			mainImagePanel.repaint();
+			if (this.isParallel.isSelected()) {
 				new Thread(() -> runParallelSearch()).start();
 			} else {
 				new Thread(() -> runSearch()).start();
@@ -146,7 +149,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
-		this.searcher = new RASearcher(raster, 0, (raster.getHeight() * raster.getWidth()) - 1);
+		running = Thread.currentThread();
+		this.searcher = new RASearcher(raster);
 		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
@@ -158,7 +162,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private void updateProgress() {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
-		while (currentProgress < total) {
+		while ((currentProgress < total) && (!running.isInterrupted())) {
 			try {
 				currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 				float percent = (currentProgress / total) * 100;
@@ -177,8 +181,12 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	@Override
 	public synchronized void information(final String message) {
-		SwingUtilities.invokeLater(() -> outputLabel.setText(message + "\n"));
-		// this.outputLabel.setText(message + "\n");
+		if (!running.isInterrupted()) {
+			SwingUtilities.invokeLater(() -> outputLabel.setText(message + "\n"));
+			// this.outputLabel.setText(message + "\n");
+		} else {
+			SwingUtilities.invokeLater(() -> outputLabel.setText("Aborted\n" + "\n"));
+		}
 	}
 
 	/**
@@ -191,9 +199,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		final int y = position / raster.getWidth();
 		information("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
 				+ positionsTriedSoFar + " positions attempted)\n");
-
-		final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
-		mainImagePanel.addHighlight(r);
+		if (!running.isInterrupted()) {
+			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
+			mainImagePanel.addHighlight(r);
+		}
 	}
 
 	@Override
@@ -203,14 +212,17 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		information("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s (" + positionsTriedSoFar
 				+ " positions attempted)\n");
 	}
-	
-	public synchronized static void passMatch(final int position, final long elapsedTime, final long positionsTriedSoFar) {
+
+	public synchronized static void passMatch(final int position, final long elapsedTime,
+			final long positionsTriedSoFar) {
 		final int x = position % raster.getWidth();
 		final int y = position / raster.getWidth();
-		SwingUtilities.invokeLater(() -> outputLabel.setText("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
-				+ positionsTriedSoFar + " positions attempted)\n" + "\n"));
-		final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
-		mainImagePanel.addHighlight(r);
+		SwingUtilities.invokeLater(() -> outputLabel.setText("Possible match at: [" + x + "," + y + "] at "
+				+ (elapsedTime / 1000.0) + "s (" + positionsTriedSoFar + " positions attempted)\n" + "\n"));
+		if (!running.isInterrupted()) {
+			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
+			mainImagePanel.addHighlight(r);
+		}
 	}
 
 	private synchronized static void launch() {
