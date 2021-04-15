@@ -50,7 +50,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private volatile Searcher searcher;
 	private volatile static Thread running;
-	private volatile ForkJoinPool pool;
+	private volatile ForkJoinPool pool = null;
 	private static BufferedImage raster;
 
 	/**
@@ -119,7 +119,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 				try {
 					this.searcher.cancel();
 				} catch (SearchCancelledException SCE) {
-					pool.shutdownNow();
+					if(pool != null) {
+						pool.shutdownNow();
+					}
 					running.interrupt();
 				}
 			}
