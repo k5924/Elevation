@@ -12,6 +12,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.ForkJoinTask;
 
@@ -49,6 +50,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private volatile Searcher searcher;
 	private volatile static Thread running;
+	private volatile ForkJoinPool pool;
 	private static BufferedImage raster;
 
 	/**
@@ -117,6 +119,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 				try {
 					this.searcher.cancel();
 				} catch (SearchCancelledException SCE) {
+					pool.shutdownNow();
 					running.interrupt();
 				}
 			}
@@ -155,8 +158,13 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		information("information");
 		this.progress.setValue(0);
 		this.progress.setStringPainted(true);
-		ForkJoinPool pool = new ForkJoinPool();
-		pool.invoke((ForkJoinTask<?>) this.searcher);
+		pool = new ForkJoinPool();
+		try {
+			pool.invoke((ForkJoinTask<?>) this.searcher);
+		} catch	(CancellationException CE){
+			SwingUtilities.invokeLater(() -> outputLabel.setText("Aborted\n" + "\n"));
+		}
+		pool.shutdown();
 	}
 
 	private void updateProgress() {
@@ -222,6 +230,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		if (!running.isInterrupted()) {
 			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
 			mainImagePanel.addHighlight(r);
+		} else {
+			
 		}
 	}
 
