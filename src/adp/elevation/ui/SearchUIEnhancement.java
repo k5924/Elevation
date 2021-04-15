@@ -158,10 +158,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		information("information");
 		this.progress.setValue(0);
 		this.progress.setStringPainted(true);
-		pool = new ForkJoinPool();
+		pool = new ForkJoinPool(); // fixes error when trying to allocate jobs after the pool has been shutdown
 		try {
 			pool.invoke((ForkJoinTask<?>) this.searcher);
-		} catch	(CancellationException CE){
+		} catch (CancellationException CE) {
 			SwingUtilities.invokeLater(() -> outputLabel.setText("Aborted\n" + "\n"));
 		}
 		pool.shutdown();
@@ -230,8 +230,6 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		if (!running.isInterrupted()) {
 			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
 			mainImagePanel.addHighlight(r);
-		} else {
-			
 		}
 	}
 
