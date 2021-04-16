@@ -26,7 +26,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		this.endPos = (raster.getWidth() * raster.getHeight()) - 1;
 		this.startTime = startTime;
 	}
-	
+
 	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchListener listener, long startTime) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
@@ -87,19 +87,19 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	public void runSearch(SearchListener listener) throws SearchCancelledException {
 		// TODO Auto-generated method stub
 		this.listener = listener;
-		synchronized(this.listener) {
-			this.reset();
-			
-			while (true) {
-				final int foundMatch = this.findMatch(this.listener, this.startTime);
-				if (foundMatch >= 0) {
-					this.listener.possibleMatch(foundMatch, System.currentTimeMillis() - this.startTime,
-							numberOfPositionsTriedSoFar());
-				} else {
-					break;
-				}
+//		synchronized(this.listener) {
+		this.reset();
+
+		while (true) {
+			final int foundMatch = this.findMatch(this.listener, this.startTime);
+			if (foundMatch >= 0) {
+				this.listener.possibleMatch(foundMatch, System.currentTimeMillis() - this.startTime,
+						numberOfPositionsTriedSoFar());
+			} else {
+				break;
 			}
 		}
+		// }
 	}
 
 	@Override
@@ -113,15 +113,15 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		// TODO Auto-generated method stub
 		throw new SearchCancelledException();
 	}
-	
+
 	private synchronized void incrementPos() {
 		this.currentPos++;
 	}
-	
+
 	private synchronized int decrementPos() {
 		return this.currentPos--;
 	}
-	
+
 	private synchronized int findMatch(final SearchListener listener, final long startTime) {
 		while (numberOfPositionsTriedSoFar() < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
@@ -133,7 +133,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		}
 		return -1;
 	}
-	
+
 	protected synchronized boolean tryPosition() {
 
 		final int x1 = this.currentPos % this.raster.getWidth();

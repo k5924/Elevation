@@ -119,7 +119,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 				try {
 					this.searcher.cancel();
 				} catch (SearchCancelledException SCE) {
-					if(pool != null) {
+					if (pool != null) {
 						pool.shutdownNow();
 					}
 					running.interrupt();
@@ -154,9 +154,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
-		final long start = System.currentTimeMillis();
+		final long startTime = System.currentTimeMillis();
 		running = Thread.currentThread();
-		this.searcher = new RASearcher(raster, start);
+		this.searcher = new RASearcher(raster, startTime);
 		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
@@ -168,7 +168,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 			information("Aborted\n");
 		}
 		pool.shutdown();
-		information("Finished at " + ((System.currentTimeMillis() - start) / 1000.0) + "s \n");
+		information("Finished at " + ((System.currentTimeMillis() - startTime) / 1000.0) + "s \n");
 	}
 
 	private void updateProgress() {
