@@ -18,7 +18,8 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	private final long startTime;
 	private volatile int currentPos;
 
-	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener, long startTime) {
+	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener,
+			long startTime) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
 		this.startPos = startPos;

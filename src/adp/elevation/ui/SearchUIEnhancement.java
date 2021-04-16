@@ -67,7 +67,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		topPanel.add(mainFilePanel);
 
 		final JPanel imagePanel = new JPanel(new BorderLayout());
-		imagePanel.add(this.mainImagePanel, BorderLayout.CENTER);
+		imagePanel.add(mainImagePanel, BorderLayout.CENTER);
 
 		final JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
 		buttonPanel.add(this.startButton);
@@ -95,18 +95,18 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				this.mainImagePanel.resetHighlights();
-				this.mainImagePanel.setImage(this.raster);
+				mainImagePanel.resetHighlights();
+				mainImagePanel.setImage(this.raster);
 				pack();
-				this.mainImagePanel.repaint();
+				mainImagePanel.repaint();
 			}
 		});
 
 		this.startButton.addActionListener(ev -> {
-			this.mainImagePanel.resetHighlights();
-			this.mainImagePanel.setImage(this.raster);
+			mainImagePanel.resetHighlights();
+			mainImagePanel.setImage(this.raster);
 			pack();
-			this.mainImagePanel.repaint();
+			mainImagePanel.repaint();
 			if (this.isParallel.isSelected()) {
 				new Thread(() -> runParallelSearch()).start();
 			} else {
@@ -213,7 +213,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 				+ positionsTriedSoFar + " positions attempted)\n");
 		if (!this.running.isInterrupted()) {
 			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
-			this.mainImagePanel.addHighlight(r);
+			mainImagePanel.addHighlight(r);
 		}
 	}
 
