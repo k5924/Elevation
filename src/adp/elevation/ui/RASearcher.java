@@ -104,21 +104,13 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		throw new SearchCancelledException();
 	}
 
-	private synchronized void incrementPos() {
-		this.currentPos++;
-	}
-
-	private synchronized int decrementPos() {
-		return this.currentPos--;
-	}
-
 	private synchronized int findMatch(final SearchListener listener, final long startTime) {
 		while (numberOfPositionsTriedSoFar() < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
-			incrementPos();
+			this.currentPos++;
 			this.counter.increment();
 			if (hit) {
-				return decrementPos();
+				return this.currentPos - 1;
 			}
 		}
 		return -1;
