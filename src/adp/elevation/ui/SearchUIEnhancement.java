@@ -37,11 +37,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JButton openBigButton = new JButton("Open elevation data");
 	private final JLabel mainFilenameLabel = new JLabel();
 
-	private final static ImagePanel mainImagePanel = new ImagePanel();
+	private final ImagePanel mainImagePanel = new ImagePanel();
 
 	private final JFileChooser chooser = new JFileChooser();
 
-	private final static JLabel outputLabel = new JLabel("information");
+	private final JLabel outputLabel = new JLabel("information");
 	private final JButton startButton = new JButton("Start");
 	private final JButton cancelButton = new JButton("Cancel");
 
@@ -49,9 +49,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JCheckBox isParallel = new JCheckBox("Run in parallel");
 
 	private volatile Searcher searcher;
-	private volatile static Thread running;
+	private volatile Thread running;
 	private volatile ForkJoinPool pool = null;
-	private static BufferedImage raster;
+	private BufferedImage raster;
 
 	/**
 	 * Construct an SearchUIEnhancement and set it visible.
@@ -67,7 +67,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		topPanel.add(mainFilePanel);
 
 		final JPanel imagePanel = new JPanel(new BorderLayout());
-		imagePanel.add(mainImagePanel, BorderLayout.CENTER);
+		imagePanel.add(this.mainImagePanel, BorderLayout.CENTER);
 
 		final JPanel buttonPanel = new JPanel(new GridLayout(1, 2));
 		buttonPanel.add(this.startButton);
@@ -75,7 +75,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 		final JPanel bottomPanel = new JPanel(new BorderLayout());
 		bottomPanel.add(this.progress, BorderLayout.NORTH);
-		bottomPanel.add(outputLabel, BorderLayout.CENTER);
+		bottomPanel.add(this.outputLabel, BorderLayout.CENTER);
 		bottomPanel.add(buttonPanel, BorderLayout.SOUTH);
 
 		final JPanel mainPanel = new JPanel(new BorderLayout());
@@ -90,23 +90,23 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 				final File file = this.chooser.getSelectedFile();
 				this.mainFilenameLabel.setText(file.getName());
 				try {
-					raster = ImageIO.read(file);
+					this.raster = ImageIO.read(file);
 				} catch (final IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
-				mainImagePanel.resetHighlights();
-				mainImagePanel.setImage(raster);
+				this.mainImagePanel.resetHighlights();
+				this.mainImagePanel.setImage(this.raster);
 				pack();
-				mainImagePanel.repaint();
+				this.mainImagePanel.repaint();
 			}
 		});
 
 		this.startButton.addActionListener(ev -> {
-			mainImagePanel.resetHighlights();
-			mainImagePanel.setImage(raster);
+			this.mainImagePanel.resetHighlights();
+			this.mainImagePanel.setImage(this.raster);
 			pack();
-			mainImagePanel.repaint();
+			this.mainImagePanel.repaint();
 			if (this.isParallel.isSelected()) {
 				new Thread(() -> runParallelSearch()).start();
 			} else {
@@ -122,7 +122,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 					if (pool != null) {
 						pool.shutdownNow();
 					}
-					running.interrupt();
+					this.running.interrupt();
 				}
 			}
 		});
@@ -141,9 +141,9 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * {@link Searcher#runSearch(SearchListener)}.
 	 */
 	private synchronized void runSearch() {
-		if (raster != null) {
-			running = Thread.currentThread();
-			this.searcher = new DevelopedSearcher(raster, Configuration.side, Configuration.deviationThreshold);
+		if (this.raster != null) {
+			this.running = Thread.currentThread();
+			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
 			new Thread(() -> updateProgress()).start();
 			information("information");
 			this.progress.setValue(0);
@@ -155,8 +155,8 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		final long startTime = System.currentTimeMillis();
-		running = Thread.currentThread();
-		this.searcher = new RASearcher(raster, startTime);
+		this.running = Thread.currentThread();
+		this.searcher = new RASearcher(this.raster, 0, (this.raster.getWidth() * this.raster.getHeight()) - 1, this, startTime);
 		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
@@ -174,7 +174,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private void updateProgress() {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
-		while ((currentProgress < total) && (!running.isInterrupted())) {
+		while ((currentProgress < total) && (!this.running.isInterrupted())) {
 			try {
 				currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 				float percent = (currentProgress / total) * 100;
@@ -193,11 +193,11 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	@Override
 	public synchronized void information(final String message) {
-		if (!running.isInterrupted()) {
-			SwingUtilities.invokeLater(() -> outputLabel.setText(message + "\n"));
-			// this.outputLabel.setText(message + "\n");
+		if (!this.running.isInterrupted()) {
+			SwingUtilities.invokeLater(() -> this.outputLabel.setText(message + "\n"));
+			// this.this.outputLabel.setText(message + "\n");
 		} else {
-			SwingUtilities.invokeLater(() -> outputLabel.setText("Aborted\n" + "\n"));
+			SwingUtilities.invokeLater(() -> this.outputLabel.setText("Aborted\n" + "\n"));
 		}
 	}
 
@@ -207,34 +207,22 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 */
 	@Override
 	public synchronized void possibleMatch(final int position, final long elapsedTime, final long positionsTriedSoFar) {
-		final int x = position % raster.getWidth();
-		final int y = position / raster.getWidth();
+		final int x = position % this.raster.getWidth();
+		final int y = position / this.raster.getWidth();
 		information("Possible match at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s ("
 				+ positionsTriedSoFar + " positions attempted)\n");
-		if (!running.isInterrupted()) {
+		if (!this.running.isInterrupted()) {
 			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
-			mainImagePanel.addHighlight(r);
+			this.mainImagePanel.addHighlight(r);
 		}
 	}
 
 	@Override
 	public synchronized void update(final int position, final long elapsedTime, final long positionsTriedSoFar) {
-		final int x = position % raster.getWidth();
-		final int y = position / raster.getWidth();
+		final int x = position % this.raster.getWidth();
+		final int y = position / this.raster.getWidth();
 		information("Update at: [" + x + "," + y + "] at " + (elapsedTime / 1000.0) + "s (" + positionsTriedSoFar
 				+ " positions attempted)\n");
-	}
-
-	public synchronized static void passMatch(final int position, final long elapsedTime,
-			final long positionsTriedSoFar) {
-		final int x = position % raster.getWidth();
-		final int y = position / raster.getWidth();
-		SwingUtilities.invokeLater(() -> outputLabel.setText("Possible match at: [" + x + "," + y + "] at "
-				+ (elapsedTime / 1000.0) + "s (" + positionsTriedSoFar + " positions attempted)\n" + "\n"));
-		if (!running.isInterrupted()) {
-			final Rectangle r = new Rectangle(x, y, Configuration.side, Configuration.side);
-			mainImagePanel.addHighlight(r);
-		}
 	}
 
 	private synchronized static void launch() {
