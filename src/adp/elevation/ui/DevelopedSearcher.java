@@ -12,7 +12,7 @@ public class DevelopedSearcher extends AbstractSearcher {
 	}
 
 	@Override
-	public void cancel() {
+	public synchronized void cancel() {
 		throw new SearchCancelledException();
 	}
 
