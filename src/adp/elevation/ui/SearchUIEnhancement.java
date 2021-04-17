@@ -51,7 +51,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private volatile Searcher searcher;
 	private volatile Thread running;
 	private volatile ForkJoinPool pool = null;
-	private BufferedImage raster;
+	private volatile BufferedImage raster;
 
 	/**
 	 * Construct an SearchUIEnhancement and set it visible.
@@ -103,14 +103,16 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 		});
 
 		this.startButton.addActionListener(ev -> {
-			mainImagePanel.resetHighlights();
-			mainImagePanel.setImage(this.raster);
-			pack();
-			mainImagePanel.repaint();
-			if (this.isParallel.isSelected()) {
-				new Thread(() -> runParallelSearch()).start();
-			} else {
-				new Thread(() -> runSearch()).start();
+			if (this.raster != null) {
+				mainImagePanel.resetHighlights();
+				mainImagePanel.setImage(this.raster);
+				pack();
+				mainImagePanel.repaint();
+				if (this.isParallel.isSelected()) {
+					new Thread(() -> runParallelSearch()).start();
+				} else {
+					new Thread(() -> runSearch()).start();
+				}
 			}
 		});
 
@@ -141,22 +143,22 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * {@link Searcher#runSearch(SearchListener)}.
 	 */
 	private synchronized void runSearch() {
-		if (this.raster != null) {
-			this.running = Thread.currentThread();
-			this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
-			new Thread(() -> updateProgress()).start();
-			information("information");
-			this.progress.setValue(0);
-			this.progress.setStringPainted(true);
-			this.searcher.runSearch(this);
-		}
+		this.running = Thread.currentThread();
+		this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
+		new Thread(() -> updateProgress()).start();
+		information("information");
+		this.progress.setValue(0);
+		this.progress.setStringPainted(true);
+		this.searcher.runSearch(this);
 	}
 
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
 		final long startTime = System.currentTimeMillis();
+		final Counter counter = new SynchronizedCounter();
 		this.running = Thread.currentThread();
-		this.searcher = new RASearcher(this.raster, 0, (this.raster.getWidth() * this.raster.getHeight()) - 1, this, startTime);
+		this.searcher = new RASearcher(this.raster, 0, (this.raster.getWidth() * this.raster.getHeight()) - 1, this,
+				startTime, counter);
 		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
@@ -174,6 +176,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private void updateProgress() {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
+		
 		while ((currentProgress < total) && (!this.running.isInterrupted())) {
 			try {
 				currentProgress = this.searcher.numberOfPositionsTriedSoFar();
