@@ -14,12 +14,12 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	private final int side = Configuration.side;
 	private final double Threshold = Configuration.deviationThreshold;
 	private final SearchUIEnhancement masterListener;
-	private final Counter counter = new SynchronizedCounter();
+	private final Counter counter;
 	private final long startTime;
 	private volatile int currentPos;
 
 	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener,
-			long startTime) {
+			long startTime, Counter counter) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
 		this.startPos = startPos;
@@ -27,6 +27,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		this.endPos = endPos;
 		this.masterListener = masterListener;
 		this.startTime = startTime;
+		this.counter = counter;
 	}
 
 	@Override
@@ -56,8 +57,11 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		}
 
 		int split = this.numberOfPositionsToTry() / 2;
-		invokeAll(new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener, this.startTime),
-				new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener, this.startTime));
+		invokeAll(
+				new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener, this.startTime,
+						this.counter),
+				new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener, this.startTime,
+						this.counter));
 	}
 
 	// code below here is from Mikes AsbtractSearcher
@@ -95,11 +99,12 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	@Override
 	public synchronized void reset() {
 		// TODO Auto-generated method stub
+		this.counter.reset();
 		this.currentPos = this.startPos;
 	}
 
 	@Override
-	public void cancel() {
+	public synchronized void cancel() {
 		// TODO Auto-generated method stub
 		throw new SearchCancelledException();
 	}
