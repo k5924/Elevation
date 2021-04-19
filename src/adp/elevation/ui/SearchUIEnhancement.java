@@ -142,7 +142,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	 * Clears output label and runs the search by calling
 	 * {@link Searcher#runSearch(SearchListener)}.
 	 */
-	private synchronized void runSearch() {
+	private void runSearch() {
 		this.running = Thread.currentThread();
 		this.searcher = new DevelopedSearcher(this.raster, Configuration.side, Configuration.deviationThreshold);
 		new Thread(() -> updateProgress()).start();
