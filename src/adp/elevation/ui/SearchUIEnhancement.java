@@ -48,6 +48,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private final JProgressBar progress = new JProgressBar();
 	private final JCheckBox isParallel = new JCheckBox("Run in parallel");
 
+	private volatile long startTime;
 	private volatile Searcher searcher;
 	private volatile Thread running;
 	private volatile ForkJoinPool pool = null;
@@ -154,11 +155,10 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 
 	private <T> void runParallelSearch() {
 		// TODO Auto-generated method stub
-		final long startTime = System.currentTimeMillis();
-		final Counter counter = new SynchronizedCounter();
+		startTime = System.currentTimeMillis();
 		this.running = Thread.currentThread();
 		this.searcher = new RASearcher(this.raster, 0, (this.raster.getWidth() * this.raster.getHeight()) - 1, this,
-				startTime, counter);
+				startTime, 0);
 		new Thread(() -> updateProgress()).start();
 		information("information");
 		this.progress.setValue(0);
@@ -176,7 +176,7 @@ public class SearchUIEnhancement extends JFrame implements SearchListener {
 	private void updateProgress() {
 		float currentProgress = this.searcher.numberOfPositionsTriedSoFar();
 		float total = this.searcher.numberOfPositionsToTry();
-		
+
 		while ((currentProgress < total) && (!this.running.isInterrupted())) {
 			try {
 				currentProgress = this.searcher.numberOfPositionsTriedSoFar();

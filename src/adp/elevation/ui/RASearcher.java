@@ -14,12 +14,14 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	private final int side = Configuration.side;
 	private final double Threshold = Configuration.deviationThreshold;
 	private final SearchUIEnhancement masterListener;
-	private final Counter counter;
 	private final long startTime;
+	private volatile Searcher search1;
+	private volatile Searcher search2;
 	private volatile int currentPos;
+	private volatile int counter;
 
 	public RASearcher(BufferedImage raster, int startPos, int endPos, SearchUIEnhancement masterListener,
-			long startTime, Counter counter) {
+			long startTime, int counter) {
 		// TODO Auto-generated constructor stub
 		this.raster = raster;
 		this.startPos = startPos;
@@ -57,11 +59,11 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		}
 
 		int split = this.numberOfPositionsToTry() / 2;
-		invokeAll(
-				new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener, this.startTime,
-						this.counter),
-				new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener, this.startTime,
-						this.counter));
+		this.search1 = new RASearcher(this.raster, this.startPos, this.endPos - split, this.masterListener, this.startTime,
+				this.counter);
+		this.search2 = new RASearcher(this.raster, this.startPos + split, this.endPos, this.masterListener, this.startTime,
+				this.counter);
+		invokeAll((RASearcher) this.search1, (RASearcher) this.search2);
 	}
 
 	// code below here is from Mikes AsbtractSearcher
@@ -69,21 +71,25 @@ public class RASearcher extends RecursiveAction implements Searcher {
 	@Override
 	public final int numberOfPositionsToTry() {
 		// TODO Auto-generated method stub
-		return this.endPos - this.startPos;
+		if(this.search1 == null && this.search2 == null) {
+			return this.endPos - this.startPos;
+		}
+		return this.search1.numberOfPositionsToTry() + this.search2.numberOfPositionsToTry();
 	}
 
 	@Override
 	public final int numberOfPositionsTriedSoFar() {
 		// TODO Auto-generated method stub
-		return this.counter.value();
+		if(this.search1 == null && this.search2 == null) {
+			return this.counter;
+		}
+		return this.search1.numberOfPositionsTriedSoFar() + this.search2.numberOfPositionsTriedSoFar();
 	}
 
 	@Override
 	public void runSearch(SearchListener listener) throws SearchCancelledException {
 		// TODO Auto-generated method stub
 		synchronized (listener) {
-			this.reset();
-
 			while (true) {
 				final int foundMatch = this.findMatch(listener, this.startTime);
 				if (foundMatch >= 0) {
@@ -98,9 +104,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 
 	@Override
 	public synchronized void reset() {
-		// TODO Auto-generated method stub
-		this.counter.reset();
-		this.currentPos = this.startPos;
+
 	}
 
 	@Override
@@ -113,7 +117,7 @@ public class RASearcher extends RecursiveAction implements Searcher {
 		while (numberOfPositionsTriedSoFar() < numberOfPositionsToTry()) {
 			final boolean hit = tryPosition();
 			this.currentPos++;
-			this.counter.increment();
+			this.counter++;
 			if (hit) {
 				return this.currentPos - 1;
 			}
